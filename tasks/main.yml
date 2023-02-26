@@ -1,0 +1,39 @@
+---
+- name: Check supported distribution
+  ansible.builtin.meta: end_host
+  when: ansible_os_family != "Debian"
+    
+- name: Ensure local APT keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  when: ansible_os_family == "Debian"
+
+- name: Add Grafana APT signing key
+  ansible.builtin.get_url:
+    checksum: sha256:ecb3d77aa13d94e1e1abc6b77f6af96665bd62a8255c774ffa0c330fcee8eed4
+    dest: /etc/apt/keyrings/grafana.key
+    mode: 0644
+    owner: root
+    group: root
+    url: https://apt.grafana.com/gpg.key
+  when: ansible_os_family == "Debian"
+  register: grafana_archive_key
+
+- name: Add Grafana apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ grafana_archive_key.dest }}] https://apt.grafana.com stable main"
+    state: present
+    filename: grafana
+    mode: 0644
+  when: ansible_os_family == "Debian"
+
+- name: Install Grafana OSS package
+  ansible.builtin.apt:
+    name: grafana
+    state: present
+  when: ansible_os_family == "Debian"
+
